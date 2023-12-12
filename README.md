@@ -17,7 +17,7 @@ For single WSI:
 
 For a WSI directory set:
 
-    python /code/run_pyHIST.py
+    python /run/run_pyHIST.py
 
 ## ROI and non-ROI detection
 
@@ -29,4 +29,4 @@ For all patches in a single WSI:
 
 For a WSI directory set:
 
-    python /code/run_ROI_detection.py
+    python /run/run_ROI_detection.py
