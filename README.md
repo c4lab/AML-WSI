@@ -19,7 +19,7 @@ For a WSI directory set:
 
     python /run/run_pyHIST.py
 
-## ROI and non-ROI detection
+## ROI detection
 
 The model architecture and code is based on [DenseNet121](https://doi.org/10.5281/zenodo.6373429).
 
@@ -30,3 +30,6 @@ For all patches in a single WSI:
 For a WSI directory set:
 
     python /run/run_ROI_detection.py
+
+## Cell detection
+
