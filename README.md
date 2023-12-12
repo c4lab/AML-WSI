@@ -9,11 +9,24 @@ multiple instance learning for predicting gene mutations from whole slide images
 
  ## Using PyHIST for patches generation
 
- The model architecture and code is based on [PyHIST](https://github.com/manuel-munoz-aguirre/PyHIST).
+ This process and code is based on [PyHIST](https://github.com/manuel-munoz-aguirre/PyHIST).
 
-For every WSI:
+For single WSI:
     
     python pyhist.py --content-threshold 0.05 --output /path/to/your/output/directory --output-downsample 1 --save-patches --save-tilecrossed-image --info "verbose" /path/to/your/WSI
+
 For a WSI directory set:
 
     python /code/run_pyHIST.py
+
+## ROI and non-ROI detection
+
+The model architecture and code is based on [DenseNet121](https://doi.org/10.5281/zenodo.6373429).
+
+For all patches in a single WSI:
+    
+    python /ROI_detection/main.py --predict-mode --report-excel /path/to/your/patches/directory/ --threshold 0.8 --output-dir /path/to/your/output/directory --down-scale 1 --batch-size 32
+
+For a WSI directory set:
+
+    python /code/run_ROI_detection.py

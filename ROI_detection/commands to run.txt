@@ -1,0 +1,10 @@
+# By Rohollah Moosavi Tayebi, email: rohollah.moosavi@uwaterloo.ca/moosavi.tayebi@gmail.com
+
+For training and evaluation, use the following command:
+python main.py --model-name densenet121 --batch-size 32 --n-folds 5 --n-epochs 15 --down-scale 2 --threshold 0.8 --data-path "D:\Gridded_Tiles" --labels-path "D:\AspirateImages\labels.txt" --output-dir "D:\Model\"
+
+For predicting, use the following commands:
+python main.py --predict-mode --report-excel --data-path "D:\AspirateImages" --threshold 0.8 --output-dir "D:\model" --down-scale 1 --batch-size 32
+or
+python main.py --load-cache --predict-mode --report-excel --data-path "D:\AspirateImages" --threshold 0.8 --output-dir "D:\model" --down-scale 1 --batch-size 32
+
