@@ -4,17 +4,19 @@ import sys
 import os
 import numpy as np
 import tensorflow as tf
+import argparse
 import pickle
 import time
 from yolov4.tf import YOLOv4
 # import argparse
 def get_args():
-    parser = argparse.ArgumentParser(description="This script gets a tile and returns detected and classified cells inside and saves it.")
-    parser.add_argument("input_patch", help="patch directory")
-    parser.add_argument("model_weights", help="model weights file")
-    parser.add_argument("out_dir", help="output directory")
-    parser.add_argument("cell_size", help="cell size")
-    parser.add_argument("cell_propotion", help="cell propotion")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input_patch", default="./", type=str, help="patch directory")
+    parser.add_argument("model_weights",default="./model/yolo-obj_best.weights",type=str, help="model weights file")
+    parser.add_argument("object_name",default="./model/obj.names", type=str, help="model object class names directory")
+    parser.add_argument("out_dir",default="./", type=str, help="output directory")
+    parser.add_argument("cell_size", default=64, type=int, help="cell size")
+    parser.add_argument("cell_propotion", default= None, type=float, help="cell propotion")
     args = parser.parse_args()
     return args
 # function to crop the cells
