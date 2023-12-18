@@ -7,7 +7,17 @@ import tensorflow as tf
 import pickle
 import time
 from yolov4.tf import YOLOv4
-# function to crop the cellsq
+# import argparse
+def get_args():
+    parser = argparse.ArgumentParser(description="This script gets a tile and returns detected and classified cells inside and saves it.")
+    parser.add_argument("input_patch", help="patch directory")
+    parser.add_argument("model_weights", help="model weights file")
+    parser.add_argument("out_dir", help="output directory")
+    parser.add_argument("cell_size", help="cell size")
+    parser.add_argument("cell_propotion", help="cell propotion")
+    args = parser.parse_args()
+    return args
+# function to crop the cells
 def crop_cells(image_name,image,bboxes,classes,out_dir = "./",cell_size = 64,cell_propotion = 0.8):
     if os.path.exists(out_dir) == False:
         os.makedirs(out_dir)
@@ -43,44 +53,65 @@ def crop_cells(image_name,image,bboxes,classes,out_dir = "./",cell_size = 64,cel
         # save the cell image
         cv2.imwrite(f"{out_dir+classes[int(num_boxes[i][4])]}/{image_name}_{i+1}.png", sub_image)
 
-yolo = YOLOv4()
-yolo.classes = "./model/obj.names"
-classes_file = "./model/obj.names"
-with open(classes_file, 'r') as f:
-    classes = f.read().splitlines()
-yolo.make_model()
-yolo.load_weights("./model/yolo-obj_best.weights", weights_type="yolo")
-# select the cell from the single patch
-slide_num = "A1130"
-patch_number = "16380"
-original_image = cv2.imread("/home/exon_storage1/aml_slide/ROI_level0_pixel512/{}/{}_{}.png".format(slide_num,slide_num,patch_number))
-resized_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB)
-resized_image = yolo.resize_image(resized_image)
-resized_image = resized_image / 255
-input_data = resized_image[np.newaxis, ...].astype(np.float32)
-
-start_time = time.time()
-candidates = yolo.model.predict(input_data)
-_candidates = []
-for candidate in candidates:
-    batch_size = candidate.shape[0]
-    grid_size = candidate.shape[1]
-    _candidates.append(
-        tf.reshape(
-            candidate, shape=(1, grid_size * grid_size * 3, -1)
+def main(args):
+    yolo = YOLOv4()
+    classes_file = "./model/obj.names"
+    with open(classes_file, 'r') as f:
+        classes = f.read().splitlines()
+    yolo.make_model()
+    yolo.load_weights(args.model_weights, weights_type="yolo")
+    original_image = cv2.imread(args.input_patch)
+    resized_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB)
+    resized_image = yolo.resize_image(resized_image)
+    resized_image = resized_image / 255
+    input_data = resized_image[np.newaxis, ...].astype(np.float32)
+    candidates = yolo.model.predict(input_data)
+    _candidates = []
+    for candidate in candidates:
+        batch_size = candidate.shape[0]
+        grid_size = candidate.shape[1]
+        _candidates.append(
+            tf.reshape(
+                candidate, shape=(1, grid_size * grid_size * 3, -1)
+            )
         )
+    candidates = np.concatenate(_candidates, axis=1)
+    pred_bboxes = yolo.candidates_to_pred_bboxes(candidates[0])
+    pred_bboxes = yolo.fit_pred_bboxes_to_original(
+        pred_bboxes, original_image.shape
     )
+    result = yolo.draw_bboxes(original_image, pred_bboxes)
+    # save the box image
+    # cv2.imwrite(f"./output/{slide_num}/{patch}.png", result)
+    # save the cropped cells
+    crop_cells(patch.split(".")[0],original_image, pred_bboxes,classes,args.out_dir,int(args.cell_size),float(args.cell_propotion))
+    # check if the pickle file exists, if not, create one
+    if os.path.exists(f"./output/{slide_num}/{slide_num}.pkl") == False:
+        #create pickle file
+        with open(f"./output/{slide_num}/{slide_num}.pkl", 'wb') as f:
+            my_dict = {patch:pred_bboxes}
+            pickle.dump(my_dict, f)
+    else:
+        # load the pickle file
+        with open(f"./output/{slide_num}/{slide_num}.pkl", 'rb') as f:
+            my_dict = pickle.load(f)
+        # add the new image to the dictionary
+        my_dict[patch] = pred_bboxes
+        # save the dictionary to the pickle file
+        with open(f"./output/{slide_num}/{slide_num}.pkl", 'wb') as f:
+            pickle.dump(my_dict, f)
 
-candidates = np.concatenate(_candidates, axis=1)
-pred_bboxes = yolo.candidates_to_pred_bboxes(candidates[0])
-pred_bboxes = yolo.fit_pred_bboxes_to_original(
-    pred_bboxes, original_image.shape
-)
-print(pred_bboxes)
-result = yolo.draw_bboxes(original_image, pred_bboxes)
-# crop_cells(f"{slide_num}_{patch_number}",original_image, pred_bboxes,f"./output/{slide_num}_{patch_number}/")
-cv2.imwrite(f"./output/{slide_num}_{patch_number}.png", result)
-# counting the elapsed time
-end_time = time.time()
-elapsed_time = end_time - start_time
-print('cells were detected from the ROI {}_{}, time:{:02d}m{:02d}s'.format(slide_num,patch_number,int(elapsed_time // 60), int(elapsed_time % 60)))
+            
+if __name__ == "__main__":
+    start_time = time.time()
+    args = get_args()
+    print(f"Code is running. please check the log file in {args.output_dir}/output.log")
+    sys.stdout = open(args.output_dir+"/output.log", 'w')
+    sys.stderr = open(args.output_dir + "/error.log", 'w')
+    print(f"Device is {device}")
+    # run the main function
+    main(args)
+
+    exec_time = time.time() - start_time
+    print("time: {:02d}m{:02d}s".format(int(exec_time // 60), int(exec_time % 60)))
+    
