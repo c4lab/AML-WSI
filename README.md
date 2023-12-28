@@ -23,17 +23,22 @@ For a WSI directory set:
 
 The model architecture and code is based on [DenseNet121](https://doi.org/10.5281/zenodo.6373429).
 
-For all patches in a single WSI:
+Detect all patches in a single WSI:
     
-    python /ROI_detection/main.py --predict-mode --report-excel /path/to/your/patches/directory/ --threshold 0.8 --output-dir /path/to/your/output/directory --down-scale 1 --batch-size 32
+    python /ROI_detection/main.py --predict-mode --report-excel --data-path /path/to/your/patches/directory/ --threshold 0.8 --output-dir /path/to/your/output/directory/ --down-scale 1 --batch-size 32
 
-For a WSI directory set:
+Detect patches in all WSIs:
 
     python /run/run_ROI_detection.py
 
 ## Cell Detection
+Please download the [best weights](https://zenodo.org/records/6373429) file.
+
+Detect all cells in a single patch:
+    
+    python /cell_detection/cell_detection.py --input_patch /path/to/your/patch/file --model_weights /path/to/best/weights/file --out_dir /path/to/your/output/directory/
 ## System Requirements
 - Python 3.9.16
-- yolov4 2.0.3
+- other package in the requrement.txt file
 
 

@@ -36,8 +36,7 @@ def crop_cells(image_name,image,bboxes,classes,out_dir,cell_size):
             sub_image = image[start_y-cell_h//2:start_y+cell_h//2 , start_x-cell_h//2:start_x+cell_h//2]
         if sub_image.shape[0] == 0 or sub_image.shape[1] == 0 or sub_image.shape[2] == 0:
             continue
-        # resize the cell to 64*64
-        
+        # resize the cell to cell_size
         sub_image = cv2.resize(sub_image,(cell_size,cell_size))
         # save the cell image
         cv2.imwrite(f"{out_dir+classes[int(num_boxes[i][4])]}/{image_name}_{i+1}.png", sub_image)
