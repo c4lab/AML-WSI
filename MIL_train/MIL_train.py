@@ -118,7 +118,7 @@ class MILdataset(data.Dataset):
         elif self.mode == 2:
             slideIDX, patch, target = self.t_data[index]
             slide_num = self.slidenames[slideIDX].split("_")[0]
-            slide_path = f"{slide_path}{slide_num}/"
+            slide_path = f"{self.slide_path}{slide_num}/"
             img = Image.open(slide_path+patch).convert('RGB')
             if self.resize:
                 img = img.resize((224,224),Image.BILINEAR)
