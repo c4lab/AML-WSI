@@ -70,6 +70,122 @@ def get_pretrained_model(model_name):
 
     return model
 
+class MILdataset(data.Dataset):
+    def __init__(self, libraryfile='', transform=None, model_name="resnet34",slide_path=""):
+        if model_name in ["densenet121","densenet161","densenet201","VGG19"]:
+            self.resize = False
+        else:
+            self.resize = True 
+        lib = torch.load(libraryfile)
+        print('loading', libraryfile)
+        #Flatten grid
+        grid = []
+        slideIDX = []
+        for i,g in enumerate(lib['grid']):
+            grid.extend(g)
+            slideIDX.extend([i]*len(g))
+            print('Slide {} has {} tiles'.format(i+1,len(g)))
+
+        print('Number of tiles: {}'.format(len(grid)))
+        self.slidenames = lib['slides']
+        self.targets = lib['targets']
+        self.grid = grid
+        self.slideIDX = slideIDX
+        self.transform = transform
+        self.mode = None
+        self.mult = lib['mult']
+        self.size = int(np.round(224*lib['mult']))
+        self.level = lib['level']
+        self.slide_path = slide_path
+    def setmode(self,mode):
+        self.mode = mode
+    def maketraindata(self, idxs):
+        self.t_data = [(self.slideIDX[x],self.grid[x],self.targets[self.slideIDX[x]]) for x in idxs]
+    def shuffletraindata(self):
+        self.t_data = random.sample(self.t_data, len(self.t_data))
+    def __getitem__(self,index):
+        if self.mode == 1:
+            slide_num = self.slidenames[self.slideIDX[index]].split("_")[0]
+            slide_path = f"{self.slide_path}{slide_num}/"
+            patch_path = slide_path+ self.grid[index]
+            img =Image.open(patch_path).convert('RGB')
+            # if self.mult != 1:
+            if self.resize:
+                img = img.resize((224,224),Image.BILINEAR)
+            if self.transform is not None:
+                img = self.transform(img)
+            return img
+        elif self.mode == 2:
+            slideIDX, patch, target = self.t_data[index]
+            slide_num = self.slidenames[slideIDX].split("_")[0]
+            slide_path = f"{slide_path}{slide_num}/"
+            img = Image.open(slide_path+patch).convert('RGB')
+            if self.resize:
+                img = img.resize((224,224),Image.BILINEAR)
+            if self.transform is not None:
+                img = self.transform(img)
+            return img, target
+    def __len__(self):
+        if self.mode == 1:
+            return len(self.grid)
+        elif self.mode == 2:
+            return len(self.t_data)
+
+def inference(run, loader, model):
+    model.eval()
+    probs = torch.FloatTensor(len(loader.dataset))
+    with torch.no_grad():
+        for i, input in enumerate(loader):
+            print('Inference\tEpoch: [{}/{}]\tBatch: [{}/{}]'.format(run+1, args.nepochs, i+1, len(loader)))
+            input = input.cuda()
+            output = F.softmax(model(input), dim=1)
+            probs[i*args.batch_size:i*args.batch_size+input.size(0)] = output.detach()[:,1].clone()
+    return probs.cpu().numpy()
+
+def train(run, loader, model, criterion, optimizer):
+    model.train()
+    running_loss = 0.
+    for i, (input, target) in enumerate(loader):
+        input = input.cuda()
+        target = target.cuda()
+        output = model(input)
+        loss = criterion(output, target)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        running_loss += loss.item()*input.size(0)
+    return running_loss/len(loader.dataset)
+
+def calc_err(pred,real):
+    pred = np.array(pred)
+    real = np.array(real)
+    neq = np.not_equal(pred, real)
+    err = float(neq.sum())/pred.shape[0]
+    fpr = float(np.logical_and(pred==1,neq).sum())/(real==0).sum()
+    fnr = float(np.logical_and(pred==0,neq).sum())/(real==1).sum()
+    return err, fpr, fnr
+
+def group_argtopk(groups, data,k=1):
+    order = np.lexsort((data, groups))
+    groups = groups[order]
+    data = data[order]
+    index = np.empty(len(groups), 'bool')
+    index[-k:] = True
+    index[:-k] = groups[k:] != groups[:-k]
+    return list(order[index])
+
+def group_max(groups, data, nmax):
+    out = np.empty(nmax)
+    out[:] = np.nan
+    order = np.lexsort((data, groups))
+    groups = groups[order]
+    data = data[order]
+    index = np.empty(len(groups), 'bool')
+    index[-1] = True
+    index[:-1] = groups[1:] != groups[:-1]
+    out[groups[index]] = data[index]
+    return out
+
 def main(args):
     best_acc = 0
     model = get_pretrained_model(args.CNN)
@@ -89,13 +205,13 @@ def main(args):
     trans = transforms.Compose([transforms.ToTensor(), normalize])
 
     #load data
-    train_dset = MILdataset(args.train_lib, trans)
+    train_dset = MILdataset(args.train_lib, trans, args.CNN, args.slide_path)
     train_loader = torch.utils.data.DataLoader(
         train_dset,
         batch_size=args.batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=False)
     if args.val_lib:
-        val_dset = MILdataset(args.val_lib, trans)
+        val_dset = MILdataset(args.val_lib, trans, args.CNN, args.slide_path)
         val_loader = torch.utils.data.DataLoader(
             val_dset,
             batch_size=args.batch_size, shuffle=False,
