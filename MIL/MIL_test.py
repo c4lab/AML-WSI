@@ -17,7 +17,7 @@ import torchvision.models as models
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--lib', type=str, default='filelist', help='path to data file')
-    parser.add_argument('--patches_path', type=str, default='', help='path to patches')
+    parser.add_argument('--slide_path', type=str, default='', help='path to patches')
     parser.add_argument('--output', type=str, default='.', help='name of output directory')
     parser.add_argument('--model', type=str, default='', help='path to pretrained model')
     parser.add_argument('--CNN', type=str, default='resnet', help='CNN model')
@@ -127,12 +127,12 @@ class MILdataset(data.Dataset):
         elif self.mode == 2:
             return len(self.t_data)
 
-def inference(run, loader, model):
+def inference(loader, model):
     model.eval()
     probs = torch.FloatTensor(len(loader.dataset))
     with torch.no_grad():
         for i, input in enumerate(loader):
-            print('Inference\tEpoch: [{}/{}]\tBatch: [{}/{}]'.format(run+1, args.nepochs, i+1, len(loader)))
+            print('Batch: [{}/{}]'.format(i+1, len(loader)))
             input = input.cuda()
             output = F.softmax(model(input), dim=1)
             probs[i*args.batch_size:i*args.batch_size+input.size(0)] = output.detach()[:,1].clone()
@@ -148,7 +148,7 @@ def group_max(groups, data, nmax):
     index[-1] = True
     index[:-1] = groups[1:] != groups[:-1]
     out[groups[index]] = data[index]
-    return out
+    return list(out)
 
 def main(args):
     model = get_pretrained_model(args.CNN)
@@ -162,7 +162,7 @@ def main(args):
     trans = transforms.Compose([transforms.ToTensor(), normalize])
 
     #load data
-    dset = MILdataset(args.lib, trans)
+    dset = MILdataset(args.lib, trans, args.CNN, args.slide_path)
     loader = torch.utils.data.DataLoader(
         dset,
         batch_size=args.batch_size, shuffle=False,
