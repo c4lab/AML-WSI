@@ -21,11 +21,14 @@ def get_args():
     parser.add_argument('--output', type=str, default='.', help='name of output directory')
     parser.add_argument('--model', type=str, default='', help='path to pretrained model')
     parser.add_argument('--CNN', type=str, default='resnet', help='CNN model')
+    parser.add_argument('--GPU', type=int, default=0, help='GPU device number (default: 0)')
+    parser.add_argument('--data_lib', type=str, default='test', help='data library for testing, you can change this to train.')
     parser.add_argument('--batch_size', type=int, default=64, help='how many images to sample per slide (default: 64)')
     parser.add_argument('--workers', default=4, type=int, help='number of data loading workers (default: 4)')
     args = parser.parse_args()
     return args
-def get_pretrained_model(model_name):
+def get_pretrained_model(model_name ,device):
+    torch.cuda.set_device(device)
     if (model_name == "densenet121"):
         model = models.densenet121(weights=models.DenseNet121_Weights.DEFAULT)
         num_features = model.classifier.in_features
@@ -138,23 +141,30 @@ def inference(loader, model):
             probs[i*args.batch_size:i*args.batch_size+input.size(0)] = output.detach()[:,1].clone()
     return probs.cpu().numpy()
 
-def group_max(groups, data, nmax):
+def group_max(groups, grid, data, nmax):
     out = np.empty(nmax)
     out[:] = np.nan
+    out_grid = []
     order = np.lexsort((data, groups))
     groups = groups[order]
     data = data[order]
+    grid = grid[order]
     index = np.empty(len(groups), 'bool')
     index[-1] = True
     index[:-1] = groups[1:] != groups[:-1]
     out[groups[index]] = data[index]
-    return list(out)
+    out_grid = grid[index]
+    return list(out), list(out_grid)
 
 def main(args):
-    model = get_pretrained_model(args.CNN)
+    #set device
+    device = torch.device(f"cuda:{args.GPU}" if torch.cuda.is_available() else "cpu")
+    print(f"Using device {device}")
+    model = get_pretrained_model(args.CNN, device)
     ch = torch.load(args.model)
     model.load_state_dict(ch['state_dict'])
     model.cuda()
+    print(model)
     cudnn.benchmark = True
 
     #normalization
@@ -170,14 +180,14 @@ def main(args):
 
     dset.setmode(1)
     probs = inference(loader, model)
-    maxs = group_max(np.array(dset.slideIDX), probs, len(dset.targets))
+    maxs, grids = group_max(np.array(dset.slideIDX),np.array(dset.grid), probs, len(dset.targets))
 
     if not os.path.exists(args.output):
         os.makedirs(args.output)
-    fp = open(os.path.join(args.output, 'predictions.csv'), 'w')
-    fp.write('file,target,prediction,probability\n')
-    for name, target, prob in zip(dset.slidenames, dset.targets, maxs):
-        fp.write('{},{},{},{}\n'.format(name, target, int(prob>=0.5), prob))
+    fp = open(os.path.join(args.output, f'predictions_{args.data_lib}.csv'), 'w')
+    fp.write('file,target,prediction,probability,top_cell\n')
+    for name, target, prob, grid in zip(dset.slidenames, dset.targets, maxs, grids):
+        fp.write('{},{},{},{},{}\n'.format(name, target, int(prob>=0.5), prob, grid))
     fp.close()
 
 if __name__ == "__main__":

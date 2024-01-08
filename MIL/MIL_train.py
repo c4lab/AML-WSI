@@ -21,6 +21,7 @@ def get_args():
     parser.add_argument('--slide_path', type=str, default='', help='path to slide')
     parser.add_argument('--output', type=str, default='.', help='name of output file')
     parser.add_argument('--CNN', type=str, default='resnet34', help='CNN model')
+    parser.add_argument('--GPU', type=int, default=0, help='GPU device number (default: 0)')
     parser.add_argument('--batch_size', type=int, default=512, help='mini-batch size (default: 512)')
     parser.add_argument('--nepochs', type=int, default=100, help='number of epochs (default: 100)')
     parser.add_argument('--workers', default=4, type=int, help='number of data loading workers (default: 4)')
@@ -29,7 +30,8 @@ def get_args():
     parser.add_argument('--k', default=1, type=int, help='top k tiles are assumed to be of the same class as the slide (default: 1, standard MIL)')
     args = parser.parse_args()
     return args
-def get_pretrained_model(model_name):
+def get_pretrained_model(model_name ,device):
+    torch.cuda.set_device(device)
     if (model_name == "densenet121"):
         model = models.densenet121(weights=models.DenseNet121_Weights.DEFAULT)
         num_features = model.classifier.in_features
@@ -68,7 +70,7 @@ def get_pretrained_model(model_name):
         model = models.resnet34(weights=models.ResNet34_Weights.DEFAULT)
         model.fc = nn.Linear(model.fc.in_features, 2)
 
-    return model
+    return model.to(device)
 
 class MILdataset(data.Dataset):
     def __init__(self, libraryfile='', transform=None, model_name="resnet34",slide_path=""):
@@ -188,9 +190,13 @@ def group_max(groups, data, nmax):
 
 def main(args):
     best_acc = 0
-    model = get_pretrained_model(args.CNN)
+    #set device
+    device = torch.device(f"cuda:{args.GPU}" if torch.cuda.is_available() else "cpu")
+    print(f"Using device {device}")
+    #load pretrained model
+    model = get_pretrained_model(args.CNN, device)
     model.cuda()
-
+    print(model)
     if args.weights==0.5:
         criterion = nn.CrossEntropyLoss().cuda()
     else:
