@@ -37,6 +37,11 @@ Please download the [best weights](https://zenodo.org/records/6373429) file.
 Detect all cells in a single patch:
     
     python /cell_detection/cell_detection.py --input_patch /path/to/your/patch/file --model_weights /path/to/best/weights/file --out_dir /path/to/your/output/directory/
+## MIL training
+This model need to choose a pre-trained classification model in [PyTorch library](https://pytorch.org/vision/stable/models.html), including AlexNet, DenseNet, EfficientNet, ResNet and ResNeXt.
+
+    python  MIL/MIL_train.py --output /path/to/your/output/directory/ --train_lib /path/to/your/training/library --val_lib /path/to/your/validation/library --slide_path path/to/your/training/images/
+
 ## System Requirements
 - Python 3.9.16
 - other package in the requrement.txt file
