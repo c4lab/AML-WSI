@@ -196,7 +196,7 @@ def main(args):
     #load pretrained model
     model = get_pretrained_model(args.CNN, device)
     model.cuda()
-    print(model)
+
     if args.weights==0.5:
         criterion = nn.CrossEntropyLoss().cuda()
     else:
@@ -273,7 +273,6 @@ def main(args):
 if __name__ == "__main__":
     start_time = time.time()
     args = get_args()
-    # run the main function
     main(args)
     exec_time = time.time() - start_time
     print("time: {:02d}m{:02d}s".format(int(exec_time // 60), int(exec_time % 60)))
