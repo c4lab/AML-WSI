@@ -1,0 +1,9 @@
+opencv-python==4.7.0.72
+numpy==1.19.5
+tensorflow==2.5.0
+argparse==1.4.0
+yolov4==2.0.3
+Pillow
+torch
+torchvision
+torchaudio
