@@ -32,7 +32,7 @@ Detect patches in all WSIs:
     python /run/run_ROI_detection.py
 
 ## Cell Detection
-Please download the [best weights](https://zenodo.org/records/6373429) file.
+This process is base on the fine-tuned model in [previous research](https://doi.org/10.1038/s43856-022-00107-6). Please download the [best weights](https://zenodo.org/records/6373429) file.
 
 Detect all cells in a single patch:
     
