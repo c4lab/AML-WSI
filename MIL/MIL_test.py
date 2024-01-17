@@ -24,7 +24,7 @@ def get_args():
     parser.add_argument('--GPU', type=int, default=0, help='GPU device number (default: 0)')
     parser.add_argument('--data_lib', type=str, default='test', help='data library for testing, you can change this to train.')
     parser.add_argument('--batch_size', type=int, default=64, help='how many images to sample per slide (default: 64)')
-    parser.add_argument('--workers', default=4, type=int, help='number of data loading workers (default: 4)')
+    parser.add_argument('--workers', default=1, type=int, help='number of data loading workers (default: 1)')
     args = parser.parse_args()
     return args
 def get_pretrained_model(model_name ,device):
