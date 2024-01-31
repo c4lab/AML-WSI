@@ -274,5 +274,9 @@ if __name__ == "__main__":
     start_time = time.time()
     args = get_args()
     main(args)
-    exec_time = time.time() - start_time
-    print("time: {:02d}m{:02d}s".format(int(exec_time // 60), int(exec_time % 60)))
+    total_seconds = int(time.time() - start_time)
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+
+    print("time: {:02d}h{:02d}m{:02d}s".format(hours, minutes, seconds))
