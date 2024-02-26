@@ -271,6 +271,7 @@ def main(args):
 
 
 if __name__ == "__main__":
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "max_split_size_mb=32"
     start_time = time.time()
     args = get_args()
     main(args)
