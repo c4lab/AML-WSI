@@ -26,6 +26,8 @@ def get_args():
     parser.add_argument('--data_lib', type=str, default='test', help='data library for testing, you can change this to train.')
     parser.add_argument('--batch_size', type=int, default=64, help='how many images to sample per slide (default: 64)')
     parser.add_argument('--workers', default=1, type=int, help='number of data loading workers (default: 1)')
+    parser.add_argument('--K_value', type=int, default=20, help='top K patches to be selected for each slide')
+    parser.add_argument('--gene', type=str, default='NPM1', help='gene name for testing')
     parser.add_argument('--top', type=int, default=1, help='the number of top patches to be selected for each slide')
     args = parser.parse_args()
     return args
@@ -159,7 +161,7 @@ def group_max(args, groups, grid, data, nmax, top):
     index[:-top] = groups[top:] != groups[:-top]
     out[groups[index]] = data[index]
     try:
-        existing_df = pd.read_csv(os.path.join(args.output, f'top_{top}_cells_{args.data_lib}.csv'))
+        existing_df = pd.read_csv(os.path.join(args.output, f'top_{top}_cells_{args.data_lib}_{args.gene}_K{args.K_value}.csv'))
     except FileNotFoundError:
         existing_df = pd.DataFrame(columns=['slide', 'probability', 'cell'])
     out_groups = groups[index]
@@ -168,7 +170,7 @@ def group_max(args, groups, grid, data, nmax, top):
     new_df = pd.DataFrame({'slide': out_groups, 'probability': out_data, 'cell': out_grid})
     combined_df = pd.concat([existing_df, new_df], ignore_index=True)
     combined_df = combined_df.sort_values(by=['slide', 'probability'], ascending=[True, False])
-    combined_df.to_csv(os.path.join(args.output, f'top_{top}_cells_{args.data_lib}.csv'), index=False)
+    combined_df.to_csv(os.path.join(args.output, f'top_{top}_cells_{args.data_lib}_{args.gene}_K{args.K_value}.csv'), index=False)
     return list(out), list(out_grid)
 
 def main(args):
@@ -198,10 +200,12 @@ def main(args):
 
     if not os.path.exists(args.output):
         os.makedirs(args.output)
-    fp = open(os.path.join(args.output, f'predictions_{args.data_lib}.csv'), 'w')
-    fp.write('file,target,prediction,probability,top_cell\n')
+    fp = open(os.path.join(args.output, f'predictions_{args.data_lib}_{args.gene}_K{args.K_value}.csv'), 'w')
+    # fp.write('file,target,prediction,probability,top_cell\n')
+    fp.write('file,target,prediction,probability\n')
     for name, target, prob, grid in zip(dset.slidenames, dset.targets, maxs, grids):
-        fp.write('{},{},{},{},{}\n'.format(name, target, int(prob>=0.5), prob, grid))
+        # fp.write('{},{},{},{},{}\n'.format(name, target, int(prob>=0.5), prob, grid))
+        fp.write('{},{},{},{},\n'.format(name, target, int(prob>=0.5), prob))
     fp.close()
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@ def get_args():
     args = parser.parse_args()
     return args
 # function to crop the cells
-def crop_cells(image_name,image,bboxes,classes,out_dir,cell_size):
+def crop_cells(image_name,image,bboxes,classes,out_dir,cell_size,cell_size_original=120,cell_propotion=0.7):
     num_boxes = bboxes
     image_h, image_w, color = image.shape
     for i in range(num_boxes.shape[0]):
@@ -27,6 +27,17 @@ def crop_cells(image_name,image,bboxes,classes,out_dir,cell_size):
         start_y = int(num_boxes[i][1] * image_h)
         cell_w = int(num_boxes[i][2] * image_w)
         cell_h = int(num_boxes[i][3] * image_h)
+        # check the cell size, if the cell is too small or too big, skip it
+        if cell_w < (cell_size_original*cell_propotion) or cell_h < (cell_size_original*cell_propotion):
+            # print("cell too small",cell_w,cell_h)
+            continue
+        elif cell_w > (cell_size_original/cell_propotion) or cell_h > (cell_size_original/cell_propotion):
+            # print("cell too big",cell_w,cell_h)
+            continue
+        # check the confidence score, if the score is too low, skip it
+        elif num_boxes[i][5]<0.5:
+            continue
+        #check the cell type by column 4, if the directory does not exist, create one
         if os.path.exists(out_dir+f"{classes[int(num_boxes[i][4])]}") == False:
             os.makedirs(out_dir+f"{classes[int(num_boxes[i][4])]}")
         # crop the cell depends on the larger edge
