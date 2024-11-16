@@ -200,9 +200,9 @@ def main(args):
 
     if not os.path.exists(args.output):
         os.makedirs(args.output)
-    fp = open(os.path.join(args.output, f'predictions_{args.data_lib}_{args.gene}_K{args.K_value}.csv'), 'w')
+    fp = open(os.path.join(args.output, f'predictions_{args.data_lib}.csv'), 'w')
     # fp.write('file,target,prediction,probability,top_cell\n')
-    fp.write('file,target,prediction,probability\n')
+    fp.write('file,target,prediction,probability,\n')
     for name, target, prob, grid in zip(dset.slidenames, dset.targets, maxs, grids):
         # fp.write('{},{},{},{},{}\n'.format(name, target, int(prob>=0.5), prob, grid))
         fp.write('{},{},{},{},\n'.format(name, target, int(prob>=0.5), prob))
