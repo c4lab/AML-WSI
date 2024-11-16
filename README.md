@@ -42,16 +42,6 @@ This model need to choose a pre-trained classification model in [PyTorch library
 
     python  MIL/MIL_train.py --output /path/to/your/output/directory/ --train_lib /path/to/your/training/library --val_lib /path/to/your/validation/library --slide_path path/to/your/training/images/
 ## ensemble learning
-
-$$
-W_{i} = \frac{exp(-l_{i})}{\sum_{i\in \{M_{K_1}, M_{K_2}, M_{K_3}\}} exp(-l_{i})}\\
-where \ l = -w_1 [y_i log(\widetilde{y}_i)]-w_0[(1-y_i) log(1-\widetilde{y}_i)]
-$$
----
-$$
-P_{ensemble} = \sum_{i\in \{M_{K_1}, M_{K_2}, M_{K_3}\}} W_{i} \times P_{i}
-$$
----
 run the `ensemble.ipynb`, with parameters: `ensemble_lib` and `gene` to chose running dataset and target gene.
 
 ## System Requirements
