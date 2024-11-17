@@ -1,6 +1,7 @@
 import os
 import time
 import numpy as np
+import pandas as pd
 import argparse
 import random
 import PIL.Image as Image
@@ -16,7 +17,7 @@ import torchvision.models as models
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--lib', type=str, default='filelist', help='path to data file')
+    parser.add_argument('--lib', type=str, default='', help='path to data file')
     parser.add_argument('--slide_path', type=str, default='', help='path to patches')
     parser.add_argument('--output', type=str, default='.', help='name of output directory')
     parser.add_argument('--model', type=str, default='', help='path to pretrained model')
@@ -24,7 +25,10 @@ def get_args():
     parser.add_argument('--GPU', type=int, default=0, help='GPU device number (default: 0)')
     parser.add_argument('--data_lib', type=str, default='test', help='data library for testing, you can change this to train.')
     parser.add_argument('--batch_size', type=int, default=64, help='how many images to sample per slide (default: 64)')
-    parser.add_argument('--workers', default=4, type=int, help='number of data loading workers (default: 4)')
+    parser.add_argument('--workers', default=1, type=int, help='number of data loading workers (default: 1)')
+    parser.add_argument('--K_value', type=int, default=20, help='top K patches to be selected for each slide')
+    parser.add_argument('--gene', type=str, default='NPM1', help='gene name for testing')
+    parser.add_argument('--top', type=int, default=1, help='the number of top patches to be selected for each slide')
     args = parser.parse_args()
     return args
 def get_pretrained_model(model_name ,device):
@@ -141,19 +145,32 @@ def inference(loader, model):
             probs[i*args.batch_size:i*args.batch_size+input.size(0)] = output.detach()[:,1].clone()
     return probs.cpu().numpy()
 
-def group_max(groups, grid, data, nmax):
+def group_max(args, groups, grid, data, nmax, top):
     out = np.empty(nmax)
     out[:] = np.nan
     out_grid = []
-    order = np.lexsort((data, groups))
+    order = np.lexsort((data, groups))#sort by groups(slideIDX), then by data(probability)
     groups = groups[order]
     data = data[order]
     grid = grid[order]
-    index = np.empty(len(groups), 'bool')
-    index[-1] = True
-    index[:-1] = groups[1:] != groups[:-1]
+    # index = np.empty(len(groups), 'bool')
+    # index[-1] = True
+    # index[:-1] = groups[1:] != groups[:-1]
+    index = np.full(len(groups), True, dtype=bool)
+    index[:-top] = False
+    index[:-top] = groups[top:] != groups[:-top]
     out[groups[index]] = data[index]
+    try:
+        existing_df = pd.read_csv(os.path.join(args.output, f'top_{top}_cells_{args.data_lib}_{args.gene}_K{args.K_value}.csv'))
+    except FileNotFoundError:
+        existing_df = pd.DataFrame(columns=['slide', 'probability', 'cell'])
+    out_groups = groups[index]
+    out_data = data[index]
     out_grid = grid[index]
+    new_df = pd.DataFrame({'slide': out_groups, 'probability': out_data, 'cell': out_grid})
+    combined_df = pd.concat([existing_df, new_df], ignore_index=True)
+    combined_df = combined_df.sort_values(by=['slide', 'probability'], ascending=[True, False])
+    combined_df.to_csv(os.path.join(args.output, f'top_{top}_cells_{args.data_lib}_{args.gene}_K{args.K_value}.csv'), index=False)
     return list(out), list(out_grid)
 
 def main(args):
@@ -164,7 +181,6 @@ def main(args):
     ch = torch.load(args.model)
     model.load_state_dict(ch['state_dict'])
     model.cuda()
-    print(model)
     cudnn.benchmark = True
 
     #normalization
@@ -180,14 +196,16 @@ def main(args):
 
     dset.setmode(1)
     probs = inference(loader, model)
-    maxs, grids = group_max(np.array(dset.slideIDX),np.array(dset.grid), probs, len(dset.targets))
+    maxs, grids = group_max(args, np.array(dset.slideIDX),np.array(dset.grid), probs, len(dset.targets), args.top)
 
     if not os.path.exists(args.output):
         os.makedirs(args.output)
     fp = open(os.path.join(args.output, f'predictions_{args.data_lib}.csv'), 'w')
-    fp.write('file,target,prediction,probability,top_cell\n')
+    # fp.write('file,target,prediction,probability,top_cell\n')
+    fp.write('file,target,prediction,probability,\n')
     for name, target, prob, grid in zip(dset.slidenames, dset.targets, maxs, grids):
-        fp.write('{},{},{},{},{}\n'.format(name, target, int(prob>=0.5), prob, grid))
+        # fp.write('{},{},{},{},{}\n'.format(name, target, int(prob>=0.5), prob, grid))
+        fp.write('{},{},{},{},\n'.format(name, target, int(prob>=0.5), prob))
     fp.close()
 
 if __name__ == "__main__":

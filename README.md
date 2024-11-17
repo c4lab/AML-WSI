@@ -41,6 +41,8 @@ Detect all cells in a single patch:
 This model need to choose a pre-trained classification model in [PyTorch library](https://pytorch.org/vision/stable/models.html), including AlexNet, DenseNet, EfficientNet, ResNet and ResNeXt.
 
     python  MIL/MIL_train.py --output /path/to/your/output/directory/ --train_lib /path/to/your/training/library --val_lib /path/to/your/validation/library --slide_path path/to/your/training/images/
+## ensemble learning
+run the `ensemble.ipynb`, with parameters: `ensemble_lib` and `gene` to chose running dataset and target gene.
 
 ## System Requirements
 - Python 3.9.16
